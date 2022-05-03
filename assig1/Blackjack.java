@@ -21,6 +21,7 @@ public class Blackjack
 		
 		RandIndexQueue<Card> shoe = new RandIndexQueue<Card>(numOfDecks*52);
 		RandIndexQueue<Card> discard = new RandIndexQueue<Card>(numOfDecks*52);
+		
 		int y = 0;
 		int z = 0;
 		for(Deck d: decks)
@@ -40,31 +41,20 @@ public class Blackjack
 		int pwins = 0;
 		int dwins = 0;
 		int pushes = 0;
-		int fourthSize = (numOfDecks*52)/4;
-		String stands = "STANDS: ";
-		String busts = "BUSTS: ";
-		String hits = "hits: ";
 		
 		System.out.println("Starting Blackjack with " + rounds + " rounds and " + numOfDecks + " decks in the shoe\n");
-		
 		for(int i = 0; i < rounds; i++)
 		{
-
 			for(int j = 0; j < 2; j++)
 			{
-				player.enqueue(shoe.getFront());
-				discard.enqueue(shoe.getFront());
-				shoe.dequeue();
-				dealer.enqueue(shoe.getFront());
-				discard.enqueue(shoe.getFront());
-				shoe.dequeue();
+				player.enqueue(shoe.dequeue());
+				dealer.enqueue(shoe.dequeue());
 			}
-			
 			if(trace > 0)
 			{
 				System.out.println("Round " + i + " beginning");
 				System.out.println("Player: " + player.toString() + " : " + player.getValue());
-				System.out.println("Dealer " + dealer.toString() + " : " + dealer.getValue());
+				System.out.println("Dealer: " + dealer.toString() + " : " + dealer.getValue());
 			}
 			
 			boolean pbool = false;
@@ -92,20 +82,17 @@ public class Blackjack
 				{	
 					while(player.getValue() < 17)
 					{
-						player.enqueue(shoe.getFront());
-						discard.enqueue(shoe.getFront());
-						
 						if(trace > 0)
 						{
-							System.out.println("Player: " + hits + shoe.getFront());
+							System.out.println("Player hits: " + shoe.getFront());
 						}
-						shoe.dequeue();
+						player.enqueue(shoe.dequeue());
 					}
 					if(player.getValue() >= 17 && player.getValue() <= 21)
 					{
 						if(trace > 0)
 						{
-							System.out.println("Player: " + stands + player.toString() + " : " + player.getValue());		
+							System.out.println("Player STANDS " + player.toString() + " : " + player.getValue());		
 						}
 						pbool = true;
 					}
@@ -113,31 +100,26 @@ public class Blackjack
 					{
 						if(trace > 0)
 						{
-							System.out.println("Player: " + busts + player.toString() + " : " + player.getValue());
-						}
-						dwins++;
-						if(trace > 0)
-						{
+							System.out.println("Player BUSTS " + player.toString() + " : " + player.getValue());
 							System.out.println("Result: Dealer wins!");
 						}
+						dwins++;
 						break;
 					}
+					
 					while(dealer.getValue() < 17)
 					{
-						dealer.enqueue(shoe.getFront());
-						discard.enqueue(shoe.getFront());
-
 						if(trace > 0)
 						{
-							System.out.println("Dealer: " + hits + shoe.getFront());
+							System.out.println("Dealer hits " + shoe.getFront());
 						}
-						shoe.dequeue();
+						dealer.enqueue(shoe.dequeue());
 					}
 					if(dealer.getValue() >= 17 && dealer.getValue() <= 21)
 					{
 						if(trace > 0)
 						{
-							System.out.println("Dealer: " + stands + dealer.toString() + " : " + dealer.getValue());		
+							System.out.println("Dealer STANDS " + dealer.toString() + " : " + dealer.getValue());		
 						}
 						dbool = true;
 					}
@@ -145,13 +127,10 @@ public class Blackjack
 					{
 						if(trace > 0)
 						{
-							System.out.println("Dealer: " + busts + dealer.toString() + " : " + dealer.getValue());		
-						}
-						pwins++;
-						if(trace > 0)
-						{
+							System.out.println("Dealer BUSTS " + dealer.toString() + " : " + dealer.getValue());		
 							System.out.println("Result: Player wins!");
 						}
+						pwins++;
 						break;
 					}
 				}
@@ -181,12 +160,16 @@ public class Blackjack
 					pushes++;
 				}
 			}
+
+			while(player.rand.size > 0 || dealer.rand.size > 0 )
+			{
+				discard.enqueue(discard(player, dealer));
+			}
 			
-			if(shoe.size() <= fourthSize)
+			if(shoe.size() <= (52*numOfDecks)/4)
 			{
 				shoe = new RandIndexQueue<Card>(b.merge(shoe, discard));
-				fourthSize = shoe.size()/4;
-				discard.clear();
+				discard.clear();	
 				System.out.println("Reshuffling the shoe in round " + i + "\n");
 				shoe.shuffle();
 			}
@@ -199,14 +182,26 @@ public class Blackjack
 				System.out.println("\n");
 			}
 		}	
-		
 		System.out.println("After " + rounds + " rounds, here are the results:");
 		System.out.println("    Player Wins: " + pwins);
 		System.out.println("    Dealer Wins: " + dwins);
 		System.out.println("    Pushes: " + pushes);
 	}
-	
-	
+
+	public static Card discard(BlackjackCards player, BlackjackCards dealer) 
+	{
+		if(player.rand.size() > 0)
+		{
+			Card c = player.rand.dequeue();
+			return c;
+		}
+		else 		
+		{
+			Card c = dealer.rand.dequeue();
+			return c;
+		}
+	}
+
 	public void fill()
 	{
 		int i = 0;
@@ -223,19 +218,11 @@ public class Blackjack
 	
 	public RandIndexQueue<Card> merge(RandIndexQueue<Card> r1, RandIndexQueue<Card> r2)
 	{
-		RandIndexQueue<Card> merge = new RandIndexQueue<Card>(r1.size() + r2.size());
-		
 		while(r1.size() != 0)
 		{
-			merge.enqueue(r1.getFront());
-			r1.dequeue();
+			r2.enqueue(r1.dequeue());
 		}
-		while(r2.size() != 0)
-        {
-        	merge.enqueue(r2.getFront());
-			r2.dequeue();
-        }
-        return merge;
+        return r2;
 	}
 	
 	public static class Deck
@@ -248,5 +235,3 @@ public class Blackjack
 		}
 	}
 }
-
-
